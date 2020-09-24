@@ -1,5 +1,6 @@
 const express = require('express')
 const morgan = require('morgan')
+const cors = require('cors')
 
 const app = express()
 
@@ -7,7 +8,12 @@ app.use(express.json())
 
 morgan.token('body', (req, res) => JSON.stringify(req.body))
 
-app.use(morgan('tiny :body'))
+app.use(morgan('tiny'))
+app.use(morgan(':body'))
+
+app.use(cors())
+
+app.use(express.static('build'))
 
 let persons = [
     {
@@ -64,6 +70,7 @@ app.post(baseUrl, (req, res) => {
         persons = persons.concat(newPerson)
         res.json(newPerson)
     }
+    console.log(persons)
 })
 
 app.delete(`${baseUrl}/:id`, (req, res) => {
