@@ -79,13 +79,14 @@ app.delete(`${baseUrl}/:id`, (req, res) => {
     res.status(204).end()
 })
 
-app.put(baseUrl, (req, res) => {
+app.put(`${baseUrl}/:id`, (req, res) => {
+    const id = Number(req.params.id)
     const editedPerson = {
-        id: req.body.id,
+        id: id,
         name: req.body.name,
         number: req.body.number
     }
-    persons = persons.filter(person => person.id !== req.body.id).concat(editedPerson)
+    persons = persons.filter(person => person.id !== id).concat(editedPerson)
 })
 
 app.get('/info', (req, res) => {
