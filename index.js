@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
@@ -15,82 +16,86 @@ app.use(cors())
 
 app.use(express.static('build'))
 
-let persons = [
-    {
-        id: 1,
-        name: "First name",
-        number: "123123123"
-    },
-    {
-        id: 2,
-        name: "Second name",
-        number: "3213254354"
-    },
-    {
-        id: 3,
-        name: "Third name",
-        number: "854983934"
-    },
-    {
-        id: 4,
-        name: "4th name",
-        number: "78658484374"
+const errorHandler = (error, req, res, next) => {
+    console.log(error.message)
+    switch (error.name) {
+        case 'CastError':
+            return res.status(400).send({ error })
+        case 'ReferenceError':
+            return res.status(500).send({ error })
     }
-]
+
+    next(error)
+}
+
+app.use(errorHandler)
+
+const Person = require('./models/person')
 
 const baseUrl = '/api/persons'
 
 app.get(baseUrl, (req, res) => {
-    res.json(persons)
+    Person.find({}).then(persons => {
+        res.json(persons)
+    })
 })
 
-app.get(`${baseUrl}/:id`, (req, res) => {
-    const id = Number(req.params.id)
-    const person = persons.find(person => person.id === id)
-    if (person) {
+app.get(`${baseUrl}/:id`, (req, res, next) => {
+    const id = req.params.id
+    Person.findById(id).then(person => {
         res.json(person)
-    } else {
-        res.status(404).send({ error: "person not found" })
-    }
+    }).catch(error => next(error))
 })
 
-app.post(baseUrl, (req, res) => {
+app.post(baseUrl, async (req, res, next) => {
+
     if (!req.body.name) {
         res.status(400).send({ error: "no name in request" })
+        return
     } else if (!req.body.number) {
         res.status(400).send({ error: "no number in request" })
-    } else if (persons.find(person => person.name === req.body.name)) {
-        res.status(403).send({ error: "name is already in phonebook" })
-    } else {
-        const newPerson = {
-            id: Math.floor(10000 * Math.random()),
-            name: req.body.name,
-            number: req.body.number
-        }
-        persons = persons.concat(newPerson)
-        res.json(newPerson)
+        return
     }
-    console.log(persons)
+    const persons = await Person.find({})
+    if (persons.find(person => person.name === req.body.name)) {
+        res.status(403).send({ error: "name is already in phonebook" })
+        return
+    }
+    const newPerson = new Person({
+        name: req.body.name,
+        number: req.body.number
+    })
+    try {
+        const savedPerson = await newPerson.save()
+        res.json(savedPerson)
+    } catch (error) {
+        next(error)
+    }
 })
 
-app.delete(`${baseUrl}/:id`, (req, res) => {
-    const id = Number(req.params.id)
-    persons = persons.filter(person => person.id !== id)
-    res.status(204).end()
+app.delete(`${baseUrl}/:id`, (req, res, next) => {
+    const id = req.params.id
+    Person.findByIdAndDelete(id)
+        .then(person => res.status(204).end())
+        .catch(error => next(error))
 })
 
-app.put(`${baseUrl}/:id`, (req, res) => {
-    const id = Number(req.params.id)
+app.put(`${baseUrl}/:id`, (req, res, next) => {
+    const id = req.params.id
     const editedPerson = {
         id: id,
         name: req.body.name,
         number: req.body.number
     }
-    persons = persons.filter(person => person.id !== id).concat(editedPerson)
+    Person.findByIdAndUpdate(id, editedPerson)
+        .then(person => res.json(person))
+        .catch(error => next(error))
 })
 
 app.get('/info', (req, res) => {
-    res.status(200).send(`<p>${persons.length} persons in phonebook</p><p>${new Date()}</p>`)
+    Person.find({})
+        .then(persons => res.status(200).send(`<p>${persons.length} persons in phonebook</p><p>${new Date()}</p>`))
+        .catch(error => next(error))
 })
 
 const PORT = process.env.PORT || 3001
