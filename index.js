@@ -17,13 +17,12 @@ app.use(cors())
 app.use(express.static('build'))
 
 const errorHandler = (error, req, res, next) => {
-    console.log(error.message)
-    switch (error.name) {
-        case 'CastError':
-            return res.status(400).send({ error })
-        case 'ReferenceError':
-            return res.status(500).send({ error })
-    }
+    if (error.name === 'CastError')
+        return res.status(400).send({ error })
+    if (error.name === 'ValidationError')
+        return res.status(400).send({ error })
+    if ('ReferenceError')
+        return res.status(500).send({ error })
 
     next(error)
 }
@@ -31,6 +30,7 @@ const errorHandler = (error, req, res, next) => {
 app.use(errorHandler)
 
 const Person = require('./models/person')
+const { response } = require('express')
 
 const baseUrl = '/api/persons'
 
@@ -48,26 +48,13 @@ app.get(`${baseUrl}/:id`, (req, res, next) => {
 })
 
 app.post(baseUrl, async (req, res, next) => {
-
-    if (!req.body.name) {
-        res.status(400).send({ error: "no name in request" })
-        return
-    } else if (!req.body.number) {
-        res.status(400).send({ error: "no number in request" })
-        return
-    }
-    const persons = await Person.find({})
-    if (persons.find(person => person.name === req.body.name)) {
-        res.status(403).send({ error: "name is already in phonebook" })
-        return
-    }
     const newPerson = new Person({
         name: req.body.name,
         number: req.body.number
     })
     try {
         const savedPerson = await newPerson.save()
-        res.json(savedPerson)
+        res.json(savedPerson.toJSON())
     } catch (error) {
         next(error)
     }
