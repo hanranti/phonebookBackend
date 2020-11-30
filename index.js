@@ -5,7 +5,25 @@ const cors = require('cors')
 
 const app = express()
 
+app.use(express.static('build'))
+
 app.use(express.json())
+
+const errorHandler = (error, req, res, next) => {
+    const errorName = error.name
+    console.log(error.message)
+    switch (errorName) {
+        case 'CastError':
+            return res.status(400).json({ error: error.message })
+        case 'ValidationError':
+            return res.status(400).json({ error: error.message })
+        case 'ReferenceError':
+            return res.status(500).json({ error: error.message })
+    }
+    next(error)
+}
+
+
 
 morgan.token('body', (req, res) => JSON.stringify(req.body))
 
@@ -13,21 +31,6 @@ app.use(morgan('tiny'))
 app.use(morgan(':body'))
 
 app.use(cors())
-
-app.use(express.static('build'))
-
-const errorHandler = (error, req, res, next) => {
-    if (error.name === 'CastError')
-        return res.status(400).send({ error })
-    if (error.name === 'ValidationError')
-        return res.status(400).send({ error })
-    if ('ReferenceError')
-        return res.status(500).send({ error })
-
-    next(error)
-}
-
-app.use(errorHandler)
 
 const Person = require('./models/person')
 const { response } = require('express')
@@ -47,17 +50,21 @@ app.get(`${baseUrl}/:id`, (req, res, next) => {
     }).catch(error => next(error))
 })
 
-app.post(baseUrl, async (req, res, next) => {
+app.post(baseUrl, (req, res, next) => {
+    console.log("Post")
     const newPerson = new Person({
         name: req.body.name,
         number: req.body.number
     })
-    try {
-        const savedPerson = await newPerson.save()
-        res.json(savedPerson.toJSON())
-    } catch (error) {
-        next(error)
-    }
+    newPerson.save()
+        .then(savedPerson => {
+            res.json(savedPerson.toJSON())
+            console.log("saved")
+        })
+        .catch(error => {
+            next(error)
+            console.log("error")
+        })
 })
 
 app.delete(`${baseUrl}/:id`, (req, res, next) => {
@@ -84,6 +91,8 @@ app.get('/info', (req, res) => {
         .then(persons => res.status(200).send(`<p>${persons.length} persons in phonebook</p><p>${new Date()}</p>`))
         .catch(error => next(error))
 })
+
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
