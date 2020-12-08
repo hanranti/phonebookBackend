@@ -9,7 +9,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:ui": "rm -rf build && cd ../phonebook && npm run build && cp -r build ../phonebookBackend/",
     "deploy": "git push",
-    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push"
+    "deploy:full": "npm run lint && npm run build:ui && git add . && git commit -m uibuild && git push",
+    "lint": "eslint . --fix"
   },
   "proxy": "http://localhost:3001",
   "author": "",
@@ -18,11 +19,12 @@
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
-    "mongoose": "^5.10.9",
+    "mongoose": "^5.11.4",
     "mongoose-unique-validator": "^2.0.3",
     "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "nodemon": "^2.0.4"
+    "eslint": "^7.15.0",
+    "nodemon": "^2.0.6"
   }
 }
